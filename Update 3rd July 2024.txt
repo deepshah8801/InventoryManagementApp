@@ -1,0 +1,13 @@
+App description July 3, 2:40 pm
+
+
+Completed admin and employee login
+
+Admin can only login through admin login and admin sign up creates user with admin role 
+
+Admin can update stock, add new item to the stock and also create the user email id and password with the role of employee
+
+
+Employee can only login through the email id and password provided by admin and only in employee login screen 
+
+Employee just have one role right now they can just update the stock to the items added by admin
