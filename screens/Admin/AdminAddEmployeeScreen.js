@@ -3,7 +3,6 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'reac
 import { registerUser, deleteUser } from '../../utils/auth';
 import { firebase } from '../../utils/firebaseconfig';
 
-
 const AdminAddEmployeeScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,7 +15,7 @@ const AdminAddEmployeeScreen = () => {
 
   const fetchEmployees = () => {
     const employeesRef = firebase.firestore().collection('users').where('role', '==', 'employee');
-  
+
     employeesRef.get()
       .then((querySnapshot) => {
         const employeesList = [];
@@ -53,7 +52,7 @@ const AdminAddEmployeeScreen = () => {
       Alert.alert('Error', 'Error removing employee:', error.message);
     }
   };
-  
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Add or Remove Employee</Text>

@@ -29,53 +29,50 @@ const StockUpdateScreen = ({ navigation }) => {
   };
 
   const startFirestoreListener = () => {
-    // Set up Firestore listener to listen for real-time updates
     firebase.firestore().collection('inventory').onSnapshot(snapshot => {
-      snapshot.docChanges().forEach(change => {
-        if (change.type === 'modified') {
-          const updatedItem = change.doc.data();
-          setInventoryItems(prevItems =>
-            prevItems.map(item =>
-              item.id === change.doc.id ? { ...item, stock: updatedItem.stock } : item
-            )
-          );
-        }
-      });
+      const items = snapshot.docs.map(doc => ({
+        id: doc.id,
+        itemName: doc.data().itemName,
+        stock: doc.data().stock,
+        inputValue: '', // Initialize input value for each item
+      }));
+      setInventoryItems(items);
     });
   };
+  
 
   const updateStock = async (itemId, value) => {
     if (isNaN(value)) {
       Alert.alert('Invalid Input', 'Please enter a valid number');
       return;
     }
-
+  
     try {
       const itemRef = firebase.firestore().collection('inventory').doc(itemId);
       const itemDoc = await itemRef.get();
-
+  
       if (!itemDoc.exists) {
         Alert.alert('Error', 'Item not found');
         return;
       }
-
+  
       const currentStock = itemDoc.data().stock;
       const updatedStock = currentStock + value;
-
+  
       if (updatedStock < 0) {
         Alert.alert('Invalid Operation', 'Stock cannot be negative');
         return;
       }
-
+  
       // Update the stock count in Firestore
       await itemRef.update({ stock: updatedStock });
-
-      // No need to fetch inventory items again; Firestore listener will update the screen
+  
     } catch (error) {
       console.error('Error updating stock:', error);
       Alert.alert('Error', 'Error updating stock. Please try again later.');
     }
   };
+  
 
   const handleInputChange = (text, itemId) => {
     // Update inputValue for the specific item
@@ -134,7 +131,7 @@ const StockUpdateScreen = ({ navigation }) => {
         )}
       />
       <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('Admin')}>
-        <Text style={styles.backButtonText}>Back to Admin Page</Text>
+        <Text style={styles.backButtonText}>Go Back</Text>
       </TouchableOpacity>
     </View>
   );

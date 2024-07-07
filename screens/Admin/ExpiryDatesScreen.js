@@ -5,7 +5,7 @@ const ExpiryDatesScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Expiry Dates</Text>
-      <Button title="Back to Admin Page" onPress={() => navigation.navigate('Admin')} />
+      <Button title="Go Back" onPress={() => navigation.navigate('Admin')} />
     </View>
   );
 };

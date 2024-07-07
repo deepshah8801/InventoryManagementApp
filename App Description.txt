@@ -1,4 +1,4 @@
-App description July 3, 2:40 pm
+App description July 7, 7:53 pm
 
 
 Completed admin and employee login
@@ -11,3 +11,6 @@ Admin can update stock, add new item to the stock and also create the user email
 Employee can only login through the email id and password provided by admin and only in employee login screen 
 
 Employee just have one role right now they can just update the stock to the items added by admin
+
+
+database updated as soon as changed to all screens (in the sync) and added search to add or remove new items
