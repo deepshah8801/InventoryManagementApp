@@ -36,10 +36,10 @@ const StockUpdateScreen = ({ navigation }) => {
         stock: doc.data().stock,
         inputValue: '', // Initialize input value for each item
       }));
+  
       setInventoryItems(items);
     });
-  };
-  
+  };  
 
   const updateStock = async (itemId, value) => {
     if (isNaN(value)) {

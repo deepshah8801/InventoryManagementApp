@@ -3,45 +3,14 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, FlatList } 
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/firestore';
 
-const EmployeeStockUpdateScreen = ({ navigation }) => {
+const StockUpdateScreen = ({ navigation }) => {
   const [inventoryItems, setInventoryItems] = useState([]);
-  const [userRole, setUserRole] = useState('');
 
   useEffect(() => {
-    fetchUserRole();
+    // Fetch initial inventory items and start Firestore listener
     fetchInventoryItems();
-    // Subscribe to Firestore listener for real-time updates
-    const unsubscribe = firebase.firestore().collection('inventory').onSnapshot(snapshot => {
-      snapshot.docChanges().forEach(change => {
-        if (change.type === 'modified') {
-          // Update local inventoryItems state when stock is modified
-          const updatedItem = change.doc.data();
-          setInventoryItems(prevItems =>
-            prevItems.map(item =>
-              item.id === change.doc.id ? { ...item, stock: updatedItem.stock } : item
-            )
-          );
-        }
-      });
-    });
-
-    // Clean up listener on unmount
-    return () => unsubscribe();
+    startFirestoreListener();
   }, []);
-
-  const fetchUserRole = async () => {
-    try {
-      const userRef = firebase.firestore().collection('users').doc(firebase.auth().currentUser.uid);
-      const doc = await userRef.get();
-      if (doc.exists) {
-        setUserRole(doc.data().role); // Assuming 'role' is a field in your user document
-      } else {
-        console.error('No such document!');
-      }
-    } catch (error) {
-      console.error('Error fetching user role:', error);
-    }
-  };
 
   const fetchInventoryItems = async () => {
     try {
@@ -59,34 +28,51 @@ const EmployeeStockUpdateScreen = ({ navigation }) => {
     }
   };
 
+  const startFirestoreListener = () => {
+    firebase.firestore().collection('inventory').onSnapshot(snapshot => {
+      const items = snapshot.docs.map(doc => ({
+        id: doc.id,
+        itemName: doc.data().itemName,
+        stock: doc.data().stock,
+        inputValue: '', // Initialize input value for each item
+      }));
+  
+      setInventoryItems(items);
+    });
+  };  
+
   const updateStock = async (itemId, value) => {
+    if (isNaN(value)) {
+      Alert.alert('Invalid Input', 'Please enter a valid number');
+      return;
+    }
+  
     try {
       const itemRef = firebase.firestore().collection('inventory').doc(itemId);
       const itemDoc = await itemRef.get();
-
+  
       if (!itemDoc.exists) {
         Alert.alert('Error', 'Item not found');
         return;
       }
-
+  
       const currentStock = itemDoc.data().stock;
       const updatedStock = currentStock + value;
-
+  
       if (updatedStock < 0) {
-        Alert.alert('Error', 'Stock cannot be negative');
+        Alert.alert('Invalid Operation', 'Stock cannot be negative');
         return;
       }
-
+  
       // Update the stock count in Firestore
       await itemRef.update({ stock: updatedStock });
-
-      // Fetch updated inventory after updating stock
-      fetchInventoryItems();
+  
     } catch (error) {
       console.error('Error updating stock:', error);
       Alert.alert('Error', 'Error updating stock. Please try again later.');
     }
   };
+  
 
   const handleInputChange = (text, itemId) => {
     // Update inputValue for the specific item
@@ -99,35 +85,14 @@ const EmployeeStockUpdateScreen = ({ navigation }) => {
 
   const handleUpdateStock = (itemId, isAddition) => {
     const item = inventoryItems.find(item => item.id === itemId);
-    const inputValue = item.inputValue.trim(); // Trim to remove any leading/trailing spaces
-
-    let value;
-    if (inputValue === '') {
-      // If input is empty, set value to 1 for addition and -1 for subtraction
-      value = isAddition ? 1 : -1;
-    } else if (isNaN(inputValue)) {
-      // Handle case where input is not a valid number
+    const value = item.inputValue ? parseInt(item.inputValue, 10) : 1;
+    if (isNaN(value) || value < 0) {
       Alert.alert('Invalid Input', 'Please enter a valid number');
       return;
-    } else {
-      // Parse the input value as an integer
-      value = parseInt(inputValue, 10);
-      if (value <= 0) {
-        Alert.alert('Invalid Input', 'Please enter a valid number greater than 0');
-        return;
-      }
-      // For subtraction, negate the value
-      if (!isAddition) {
-        value = -value;
-      }
     }
 
-    // Check if the user has permission to update stock
-    if (userRole === 'employee' || (userRole && userRole.permissions && userRole.permissions.includes('edit'))) {
-      updateStock(itemId, value);
-    } else {
-      Alert.alert('Permission Denied', 'You do not have permission to update stock');
-    }
+    const updateValue = isAddition ? value : -value;
+    updateStock(itemId, updateValue);
   };
 
   return (
@@ -140,37 +105,33 @@ const EmployeeStockUpdateScreen = ({ navigation }) => {
           <View style={styles.inventoryItem}>
             <Text style={styles.itemName}>{item.itemName}</Text>
             <Text style={styles.currentStock}>Stock: {item.stock}</Text>
-            {userRole === 'employee' || (userRole && userRole.permissions && userRole.permissions.includes('edit')) ? (
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                  style={styles.button}
-                  onPress={() => handleUpdateStock(item.id, true)} // Example where true indicates addition
-                >
-                  <Text style={styles.buttonText}>+</Text>
-                </TouchableOpacity>
-                <TextInput
-                  style={styles.input}
-                  keyboardType="numeric"
-                  onChangeText={(text) => handleInputChange(text, item.id)}
-                  value={item.inputValue}
-                  placeholder="Enter quantity"
-                  placeholderTextColor="white"
-                />
-                <TouchableOpacity
-                  style={styles.button}
-                  onPress={() => handleUpdateStock(item.id, false)} // Example where false indicates subtraction
-                >
-                  <Text style={styles.buttonText}>-</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <Text style={{ color: 'white' }}>You do not have permission to edit</Text>
-            )}
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => handleUpdateStock(item.id, false)}
+              >
+                <Text style={styles.buttonText}>-</Text>
+              </TouchableOpacity>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                onChangeText={(text) => handleInputChange(text, item.id)}
+                value={item.inputValue}
+                placeholder="Enter quantity"
+                placeholderTextColor="white"
+              />
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => handleUpdateStock(item.id, true)}
+              >
+                <Text style={styles.buttonText}>+</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       />
-      <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('Employee')}>
-        <Text style={styles.backButtonText}>Back to Employee Page</Text>
+      <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('Admin')}>
+        <Text style={styles.backButtonText}>Go Back</Text>
       </TouchableOpacity>
     </View>
   );
@@ -247,4 +208,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default EmployeeStockUpdateScreen;
+export default StockUpdateScreen;
